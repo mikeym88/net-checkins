@@ -2,6 +2,14 @@
 
 This is a utility to manage Ham Radio Net Check-ins.
 
+## Where are the logs stored? How to I view them?
+
+Currently they're being stored in a SQLite3 database locally on the hard drive. 
+The filename will be `checkins.db` and you can read the file with the following applications:
+
+* [DBeaver](https://dbeaver.io/)
+* [DB Browser for SQLite](https://sqlitebrowser.org/)
+
 ## Running
 
 ### PowerShell
