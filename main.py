@@ -49,10 +49,10 @@ def log_call_sign_pd(repeater: str, call_sign: str) -> None:
 
 async def main(default_repeater: str = "VE7RVF", accept_default: bool = False):
     loop = asyncio.get_running_loop()
-    if accept_default != False:
-        repeater = await aioconsole.ainput(f"Repeater (default: {default_repeater}): ")
-    else:
+    if accept_default == True:
         repeater = default_repeater
+    else:
+        repeater = await aioconsole.ainput(f"Repeater (default: {default_repeater}): ")
     if not repeater or not repeater.strip():
         repeater = default_repeater
     print(f"Using repeater: {repeater}")
@@ -77,7 +77,6 @@ if __name__ == '__main__':
         action=argparse.BooleanOptionalAction
     )
     args = parser.parse_args()
-
     # ORM
     Base.metadata.create_all(engine)
 
