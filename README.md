@@ -9,6 +9,8 @@ The filename will be `checkins.db` and you can read the file with the following 
 
 * [DBeaver](https://dbeaver.io/)
 * [DB Browser for SQLite](https://sqlitebrowser.org/)
+* [SQLite Viewer Web App](https://sqliteviewer.app/)
+* [SQLite Viewer](https://inloop.github.io/sqlite-viewer/)
 
 ## Running
 
