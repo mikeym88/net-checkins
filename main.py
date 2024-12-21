@@ -10,6 +10,7 @@ from radio_operator import Base
 from urllib3.exceptions import MaxRetryError
 from requests.exceptions import ReadTimeout
 import argparse
+import logging
 
 
 engine = create_engine("sqlite:///checkins.db")
@@ -76,9 +77,19 @@ if __name__ == '__main__':
         help="Accept default(s) (e.g. VA7RVF repeater)",
         action=argparse.BooleanOptionalAction
     )
+    parser.add_argument(
+        '--debug',
+        help="Enable debug mode",
+        action=argparse.BooleanOptionalAction
+    )
     args = parser.parse_args()
+
     # ORM
     Base.metadata.create_all(engine)
+    
+    # Set debug mode
+    if args.debug:
+        logging.getLogger("asyncio").setLevel(logging.DEBUG)
 
     # Asyncio loop
     loop = asyncio.new_event_loop()
