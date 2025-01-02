@@ -4,16 +4,15 @@ import pandas as pd
 from radio_operator import RadioOperator
 import asyncio
 import aioconsole
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from radio_operator import Base
 from urllib3.exceptions import MaxRetryError
 from requests.exceptions import ReadTimeout
 import argparse
 import logging
-
-
-engine = create_engine("sqlite:///checkins.db")
+from dbo import engine, sql_string
+import logging
+from net_logging import LogDBHandler
 
 
 def log_call_sign_orm(repeater: str, call_sign: str) -> None:
@@ -27,7 +26,6 @@ def log_call_sign_orm(repeater: str, call_sign: str) -> None:
 
 
 def log_call_sign_pd(repeater: str, call_sign: str) -> None:
-    print("task started")
     with sqlite3.connect("checkins.db") as db:
         try:
             operator = RadioOperator(call_sign, repeater)
@@ -87,10 +85,17 @@ if __name__ == '__main__':
     # ORM
     Base.metadata.create_all(engine)
     
+    logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
+    db_handler = LogDBHandler(sql_string)
+    root_logger = logging.getLogger()
+    root_logger.addHandler(db_handler)
+    root_logger.setLevel(logging.INFO)
+    root_logger.info("Logging enabled")
     # Set debug mode
     if args.debug:
-        logging.getLogger("asyncio").setLevel(logging.DEBUG)
-
+        root_logger.setLevel(logging.DEBUG)
+        root_logger.debug("Debug mode enabled")
+    
     # Asyncio loop
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

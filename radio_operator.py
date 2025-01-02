@@ -4,6 +4,8 @@ from io import StringIO
 import re
 from datetime import datetime
 from requests.exceptions import ReadTimeout, ConnectTimeout
+from urllib3.exceptions import MaxRetryError, NameResolutionError
+from socket import gaierror
 import copy
 
 from typing import Optional
@@ -11,10 +13,8 @@ from typing import Optional
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy import String, DateTime
-from sqlalchemy.orm import DeclarativeBase
+from dbo import Base
 
-class Base(DeclarativeBase):
-    pass
 
 class RadioOperator(Base):
     __tablename__ = "checkins"
@@ -52,7 +52,8 @@ class RadioOperator(Base):
                 user_info = self.get_american_call_sign_info(call_sign)
             elif self.validate_canadian_call_sign(call_sign):
                 user_info = self.get_canadian_call_sign_info(call_sign)
-        except (ConnectTimeout, ReadTimeout) as e:
+        except (ConnectTimeout, ReadTimeout, ConnectionError, 
+                MaxRetryError, NameResolutionError, gaierror) as e:
             print(f"Except: {str(e)}")
         finally:
             if not user_info:
@@ -71,6 +72,8 @@ class RadioOperator(Base):
         return f"{self.full_name} ({self.call_sign}) from {location}."
     
     def set_user_info(self, user_info: dict) -> None:
+        if user_info is None:
+            return
         self.user_info = user_info
         self.call_sign = user_info["call_sign"].strip()
         self.full_name = user_info["full_name"].strip()
