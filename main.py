@@ -100,9 +100,9 @@ if __name__ == "__main__":
     try:
         loop.run_until_complete(main_task)
     except KeyboardInterrupt:
-        print("cancelled")
+        print("Program terminated by user.")
     except EOFError:
-        print("cancelled during input")
+        print("Program terminated by user during input.")
     finally:
         pending_tasks = asyncio.all_tasks(loop=loop)
         for task in pending_tasks:

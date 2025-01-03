@@ -7,6 +7,7 @@ from requests.exceptions import ReadTimeout, ConnectTimeout
 from urllib3.exceptions import MaxRetryError, NameResolutionError
 from socket import gaierror
 import copy
+import logging
 
 from typing import Optional
 
@@ -33,7 +34,12 @@ class RadioOperator(Base):
     checkin_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
     repeater: Mapped[str] = mapped_column(String(32))
 
-    def __init__(self, call_sign: str, repeater: str | None = None) -> None:
+    def __init__(self, call_sign: str, repeater: str | None = None, log_level: int = logging.INFO) -> None:
+        # Set logging
+        self.logger = logging.getLogger("radio_operator")
+        self.logger.setLevel(log_level)
+
+        # User Info
         user_info = None
         bare_user_info = {
             "full_name": None,
@@ -49,12 +55,18 @@ class RadioOperator(Base):
         }
         try:
             if self.validate_american_call_sign(call_sign):
+                self.logger.info(f"American call sign detected: {call_sign}")
                 user_info = self.get_american_call_sign_info(call_sign)
             elif self.validate_canadian_call_sign(call_sign):
+                self.logger.info(f"Canadian call sign detected: {call_sign}")
                 user_info = self.get_canadian_call_sign_info(call_sign)
+            elif not call_sign.isalnum():
+                self.logger.warning(f"Call sign is porbably invalid due to not being alphanumeric: {call_sign}")
+            else:
+                self.logger.warning(f"Call sign is not Canadian nor American, or is invalid: {call_sign}")
         except (ConnectTimeout, ReadTimeout, ConnectionError, 
                 MaxRetryError, NameResolutionError, gaierror) as e:
-            print(f"Except: {str(e)}")
+            self.logger.error(f"Except: {str(e)}")
         finally:
             if not user_info:
                 user_info = bare_user_info
@@ -245,7 +257,7 @@ class RadioOperator(Base):
             parser = etree.HTMLParser()
             tree = etree.parse(StringIO(html), parser)
             form_action = tree.xpath("//form[@name='amateurSearch']/@action")[0]
-            print(f"Might need to send request to {form_action}")
+            self.logger.info(f"Might need to send request to {form_action}")
             amateur_results_endpoint = base_endpoint + "results.jsp"
             
             # now_date = datetime.now().date().strftime("%m/%d/%Y")
