@@ -8,4 +8,3 @@ engine = create_engine(sql_string)
 
 class Base(DeclarativeBase):
     pass
-
