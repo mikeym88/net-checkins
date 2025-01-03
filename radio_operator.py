@@ -337,7 +337,7 @@ class RadioOperator(Base):
                     if component and component != operator_details["full_name"]:
                         component = component.replace(",", "\n")
                         component = component.split("\n")
-                        if type(component) == list:
+                        if isinstance(component, list):
                             address_arr += component
                         else:
                             address_arr.append(component)

@@ -1,4 +1,3 @@
-
 import sqlite3
 import pandas as pd
 from radio_operator import RadioOperator
@@ -11,7 +10,6 @@ from requests.exceptions import ReadTimeout
 import argparse
 import logging
 from dbo import engine, sql_string
-import logging
 from net_logging import LogDBHandler
 
 
@@ -43,12 +41,10 @@ def log_call_sign_pd(repeater: str, call_sign: str) -> None:
         except ReadTimeout as e:
             print(f"ReadTimeout: {str(e)}")
 
-    print("task complete")
-
 
 async def main(default_repeater: str = "VE7RVF", accept_default: bool = False):
     loop = asyncio.get_running_loop()
-    if accept_default == True:
+    if accept_default is True:
         repeater = default_repeater
     else:
         repeater = await aioconsole.ainput(f"Repeater (default: {default_repeater}): ")
@@ -63,29 +59,30 @@ async def main(default_repeater: str = "VE7RVF", accept_default: bool = False):
         loop.run_in_executor(None, log_call_sign_orm, repeater, call_sign)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Program Expenses
     parser = argparse.ArgumentParser(
-        prog='Net Control - Check-ins',
-        description='Program that logs the check-ins.',
-        epilog='This program looks up Canadian and American call signs automatically'
+        prog="Net Control - Check-ins",
+        description="Program that logs the check-ins.",
+        epilog="This program looks up Canadian and American call signs automatically",
     )
     parser.add_argument(
-        '-d', '--accept-defaults',
+        "-d",
+        "--accept-defaults",
         help="Accept default(s) (e.g. VA7RVF repeater)",
-        action=argparse.BooleanOptionalAction
+        action=argparse.BooleanOptionalAction,
     )
     parser.add_argument(
-        '--debug',
-        help="Enable debug mode",
-        action=argparse.BooleanOptionalAction
+        "--debug", help="Enable debug mode", action=argparse.BooleanOptionalAction
     )
     args = parser.parse_args()
 
     # ORM
     Base.metadata.create_all(engine)
-    
-    logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
+
+    logFormatter = logging.Formatter(
+        "%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s"
+    )
     db_handler = LogDBHandler(sql_string)
     root_logger = logging.getLogger()
     root_logger.addHandler(db_handler)
@@ -95,7 +92,7 @@ if __name__ == '__main__':
     if args.debug:
         root_logger.setLevel(logging.DEBUG)
         root_logger.debug("Debug mode enabled")
-    
+
     # Asyncio loop
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
