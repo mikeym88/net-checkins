@@ -5,7 +5,35 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Net Check-in (default repeater)",
+            "name": "Check-ins",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "args": []
+        },
+        {
+            "name": "Check-ins (defaults)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--accept-defaults"
+            ]
+        },
+        {
+            "name": "Check-ins (debug)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--debug"
+            ]
+        },
+        {
+            "name": "Check-ins (defaults + debug)",
             "type": "debugpy",
             "request": "launch",
             "program": "main.py",
