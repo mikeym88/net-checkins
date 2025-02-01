@@ -1,16 +1,17 @@
-import sqlite3
-import pandas as pd
-from radio_operator import RadioOperator
-import asyncio
-import aioconsole
-from sqlalchemy.orm import Session
-from radio_operator import Base
-from urllib3.exceptions import MaxRetryError
-from requests.exceptions import ReadTimeout
 import argparse
+import asyncio
 import logging
+import sqlite3
+
+import aioconsole
+import pandas as pd
+from requests.exceptions import ReadTimeout
+from sqlalchemy.orm import Session
+from urllib3.exceptions import MaxRetryError
+
 from dbo import engine, sql_string
 from net_logging import LogDBHandler
+from radio_operator import Base, RadioOperator
 
 
 def log_call_sign_orm(repeater: str, call_sign: str) -> None:
@@ -80,7 +81,7 @@ if __name__ == "__main__":
     # ORM
     Base.metadata.create_all(engine)
 
-    logFormatter = logging.Formatter(
+    log_formatter = logging.Formatter(
         "%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s"
     )
     db_handler = LogDBHandler(sql_string)
@@ -97,13 +98,16 @@ if __name__ == "__main__":
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     main_task = loop.create_task(main(accept_default=args.accept_defaults))
+    exception_log_message = None
     try:
         loop.run_until_complete(main_task)
     except KeyboardInterrupt:
-        print("Program terminated by user.")
+        exception_log_message = "Program terminated by user."
     except EOFError:
-        print("Program terminated by user during input.")
+        exception_log_message = "Program terminated by user during input."
     finally:
+        if exception_log_message:
+            root_logger.exception(exception_log_message)
         pending_tasks = asyncio.all_tasks(loop=loop)
         for task in pending_tasks:
             task.cancel()

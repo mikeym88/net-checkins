@@ -1,11 +1,11 @@
 import logging
-from dbo import Base, engine
-from typing import Optional
-from sqlalchemy.orm import Mapped, Session
-from sqlalchemy.orm import mapped_column
-from sqlalchemy import String, DateTime
 from datetime import datetime
+from typing import Optional
 
+from sqlalchemy import DateTime, String
+from sqlalchemy.orm import Mapped, Session, mapped_column
+
+from dbo import Base, engine
 
 # TODO: one option is to log to disk and periodically batch insert to DB: https://stackoverflow.com/a/290340/6288413
 # TODO: log to database: https://stackoverflow.com/questions/2314307/python-logging-to-database
@@ -57,9 +57,7 @@ class DatabaseLog(Base):
 
 
 class LogDBHandler(logging.Handler):
-    """
-    Customized logging handler that puts logs to the database.
-    """
+    """Customized logging handler that puts logs to the database."""
 
     def __init__(self, sql_string: str):
         logging.Handler.__init__(self)

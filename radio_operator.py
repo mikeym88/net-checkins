@@ -1,19 +1,19 @@
-import requests
-from lxml import etree
-from io import StringIO
-import re
-from datetime import datetime
-from requests.exceptions import ReadTimeout, ConnectTimeout
-from urllib3.exceptions import MaxRetryError, NameResolutionError
-from socket import gaierror
+from __future__ import annotations
 import copy
 import logging
-
+import re
+from datetime import datetime
+from io import StringIO
+from socket import gaierror
 from typing import Optional
 
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column
-from sqlalchemy import String, DateTime
+import requests
+from lxml import etree
+from requests.exceptions import ConnectTimeout, ReadTimeout
+from sqlalchemy import DateTime, String
+from sqlalchemy.orm import Mapped, mapped_column
+from urllib3.exceptions import MaxRetryError, NameResolutionError
+
 from dbo import Base
 
 
@@ -34,7 +34,8 @@ class RadioOperator(Base):
     checkin_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
     repeater: Mapped[str] = mapped_column(String(32))
 
-    def __init__(self, call_sign: str, repeater: str | None = None, log_level: int = logging.INFO) -> None:
+    def __init__(self, call_sign: str, repeater: str | None = None,
+                 log_level: int = logging.INFO) -> None:
         # Set logging
         self.logger = logging.getLogger("radio_operator")
         self.logger.setLevel(log_level)
@@ -51,38 +52,39 @@ class RadioOperator(Base):
             "qualifications": None,
             "status": "",
             "expiration_date": None,
-            "FRN": None
+            "FRN": None,
         }
         try:
             if self.validate_american_call_sign(call_sign):
-                self.logger.info(f"American call sign detected: {call_sign}")
+                log_message = f"American call sign detected: {call_sign}"
+                self.logger.info(log_message)
                 user_info = self.get_american_call_sign_info(call_sign)
             elif self.validate_canadian_call_sign(call_sign):
-                self.logger.info(f"Canadian call sign detected: {call_sign}")
+                log_message = f"Canadian call sign detected: {call_sign}"
+                self.logger.info(log_message)
                 user_info = self.get_canadian_call_sign_info(call_sign)
             elif not call_sign.isalnum():
-                self.logger.warning(f"Call sign is porbably invalid due to not being alphanumeric: {call_sign}")
+                log_message = f"Call sign is porbably invalid due to not being alphanumeric: {call_sign}"
+                self.logger.warning(log_message)
             else:
-                self.logger.warning(f"Call sign is not Canadian nor American, or is invalid: {call_sign}")
-        except (ConnectTimeout, ReadTimeout, ConnectionError, 
+                log_message = f"Call sign is not Canadian nor American, or is invalid: {call_sign}"
+                self.logger.warning(log_message)
+        except (ConnectTimeout, ReadTimeout, ConnectionError,
                 MaxRetryError, NameResolutionError, gaierror) as e:
-            self.logger.error(f"Except: {str(e)}")
+            log_message = f"Except: {e!s}"
+            self.logger.exception(log_message)
         finally:
             if not user_info:
                 user_info = bare_user_info
-            
+
         self.repeater = repeater
         self.checkin_date = datetime.now()
         self.set_user_info(user_info)
-    
+
     def __str__(self):
-        location = ""
-        if self.city:
-            location = f"{self.city}, {self.province}"
-        else:
-            location = f"{self.province}"
+        location = f"{self.city}, {self.province}" if self.city else f"{self.province}"
         return f"{self.full_name} ({self.call_sign}) from {location}."
-    
+
     def set_user_info(self, user_info: dict) -> None:
         if user_info is None:
             return
@@ -111,16 +113,17 @@ class RadioOperator(Base):
         self.frn = user_info["FRN"]
         if not self.frn:
             self.frn = None
-    
+
     def operator_info(self) -> dict:
         return self.user_info
 
     @staticmethod
     def validate_american_call_sign(call_sign: str) -> bool | None:
+        """Validate an American call sign."""
         call_sign = call_sign.upper().strip().replace(" ", "").replace("-", "")
         if not call_sign:
             return False
-        
+
         validation_rules = {
             "group_d_regex": "(K|W)[A-Z]\d[A-Z]{3}",
             "group_c_1_regex": "(K|N|W)\d[A-Z]{3}",
@@ -131,12 +134,8 @@ class RadioOperator(Base):
             "group_a_3_regex": "(K|N|W)\d[A-Z]{2}"
         }
 
-        for _, rule in validation_rules.items():
-            if re.match(rule, call_sign):
-                return True
-        
-        return False
-    
+        return any(re.match(rule, call_sign) for _, rule in validation_rules.items())
+
     @staticmethod
     def validate_canadian_call_sign(call_sign: str) -> bool:
         call_sign = call_sign.upper().strip().replace(" ", "").replace("-", "")
@@ -241,6 +240,7 @@ class RadioOperator(Base):
         return full_name
 
     def get_american_call_sign_info(self, call_sign: str) -> dict:
+        """Get operator info with American call sign."""
         base_endpoint = "https://wireless2.fcc.gov/UlsApp/UlsSearch/"
         with requests.Session() as sess:
             call_sign = call_sign.strip().upper()
@@ -259,8 +259,7 @@ class RadioOperator(Base):
             form_action = tree.xpath("//form[@name='amateurSearch']/@action")[0]
             self.logger.info(f"Might need to send request to {form_action}")
             amateur_results_endpoint = base_endpoint + "results.jsp"
-            
-            # now_date = datetime.now().date().strftime("%m/%d/%Y")
+
             amateur_search_form_data = {
                 "fiUlsExactMatchInd": "Y",
                 "fiulsTrusteeName": "",
@@ -280,7 +279,7 @@ class RadioOperator(Base):
                 "ulsOrderBy": "ASC",
                 "Submit": "Submit",
                 "hiddenForm": "hiddenForm",
-                "jsValidated": "true"
+                "jsValidated": "true",
             }
             post_headers = copy.deepcopy(headers)
             post_headers["Content-Type"] = "application/x-www-form-urlencoded"
@@ -289,6 +288,7 @@ class RadioOperator(Base):
             post_headers["Cache-Control"] = "max-age=0"
             post_headers["Origin"] = "https://wireless2.fcc.gov"
             operator_details = {}
+            exception_message = None
             try:
                 r = sess.post(amateur_results_endpoint,
                             data=amateur_search_form_data,
@@ -300,12 +300,13 @@ class RadioOperator(Base):
                 results_xpath = "//table[@summary='License search results']//tr[not(th)]"
                 matches = tree.xpath(results_xpath)
                 if not matches:
-                    print(f"No matches found for {call_sign}")
+                    log_message = f"No matches found for {call_sign}"
+                    self.logger.info(log_message)
                     return
                 ham = matches[0]
                 details_url = None
                 # 0. Result number
-                # 1. Call Sign/Lease ID	
+                # 1. Call Sign/Lease ID
                 # 2. Name
                 # 3. FRN
                 # 4. Radio Service
@@ -332,7 +333,7 @@ class RadioOperator(Base):
                         expiration_date = expiration_date.strip()
                         expiration_date = datetime.strptime(expiration_date, "%m/%d/%Y")
                         operator_details["expiration_date"] = expiration_date
-                
+
                 r = sess.get(details_url,
                             headers=headers,
                             timeout=(5, 30)
@@ -353,10 +354,10 @@ class RadioOperator(Base):
                             address_arr += component
                         else:
                             address_arr.append(component)
-                
+
                 operator_details["address"], operator_details["city"], operator_details["province"], operator_details["postal_code"] = address_arr
                 operator_details["province"] = self._state_abbreviation_to_full_name(operator_details["province"])
-                
+
                 # Get operator class
                 class_xpath = "//tr[td/table//td/b[contains(text(), 'Amateur') and contains(text(), 'Data')]]/following-sibling::tr[1]//table//tr/td[contains(text(), 'Operator Class')]/following-sibling::td[1]/text()"
                 class_matches = tree.xpath(class_xpath)
@@ -369,16 +370,19 @@ class RadioOperator(Base):
                 qualifications = "".join(technician_class) + " - " + "Group " + "".join(group)
                 operator_details["qualifications"] = qualifications
             except ConnectionError as e:
-                print(f"ConnectionError: {str(e)}")
+                exception_message = f"ConnectionError: {e!s}"
             except TimeoutError as e:
-                print(f"TimeoutError: {str(e)}")
+                exception_message = f"TimeoutError: {e!s}"
             except ReadTimeout as e:
-                print(f"ReadTimeout: {str(e)}")
-        
+                exception_message = f"ReadTimeout: {e!s}"
+            finally:
+                if exception_message:
+                    self.logger.exception(exception_message)
+
         return operator_details
 
-    @staticmethod
-    def get_canadian_call_sign_info(call_sign: str) -> dict | None:
+    def get_canadian_call_sign_info(self, call_sign: str) -> dict | None:
+        """Get operator information for a Canadian call sign."""
         call_sign = call_sign.strip().upper()
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
@@ -395,14 +399,15 @@ class RadioOperator(Base):
             "P_PROV_STATE_CD": None,
             "P_POSTAL_ZIP_CODE": None,
             "Z_ACTION": "QUERY",
-            "Z_CHK": 0
+            "Z_CHK": 0,
         }
         response = requests.post(amateur_results_endpoint, headers=headers, data=amateur_search_form_data)
         html = response.content.decode("utf-8")
         details_url_pattern = r'<a href="(?P<details_url>.*)">' + call_sign.upper() + "</a>"
         details_url = re.search(details_url_pattern, html)
         if not details_url:
-            print(f"No URL found for {call_sign}")
+            log_message = f"No URL found for {call_sign}"
+            self.logger.info(log_message)
             return
         details_url = "https://apc-cap.ic.gc.ca/pls/apc_anon/" + details_url.group("details_url")
         details_url = details_url.replace("&amp;", "&")
@@ -439,6 +444,6 @@ class RadioOperator(Base):
             "qualifications": qualifications.strip(),
             "status": "Active",
             "expiration_date": None,
-            "FRN": None
+            "FRN": None,
         }
 
