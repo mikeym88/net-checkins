@@ -43,10 +43,10 @@ class RadioOperator(Base):
         # User Info
         user_info = None
         bare_user_info = {
-            "full_name": None,
+            "full_name": "",
             "call_sign": call_sign,
-            "address": None,
-            "city": None,
+            "address": "",
+            "city": "",
             "province": None,
             "postal_code": None,
             "qualifications": None,
@@ -244,14 +244,12 @@ class RadioOperator(Base):
         base_endpoint = "https://wireless2.fcc.gov/UlsApp/UlsSearch/"
         with requests.Session() as sess:
             call_sign = call_sign.strip().upper()
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                "Accept": "*/*",
-                "Connection": "keep-alive",
-                "Accept-Encoding": "gzip, deflate, br"
-            }
+            headers = {}
             fcc_amateur_search_endpoint = base_endpoint + "searchAmateur.jsp"
             r = sess.get(fcc_amateur_search_endpoint, headers=headers)
+            if not (200 <= r.status_code < 300):
+                # TODO: log error here.
+                return None
             sess.cookies = r.cookies
             html = r.content.decode("utf-8")
             parser = etree.HTMLParser()
@@ -261,7 +259,7 @@ class RadioOperator(Base):
             amateur_results_endpoint = base_endpoint + "results.jsp"
 
             amateur_search_form_data = {
-                "fiUlsExactMatchInd": "Y",
+                # "fiUlsExactMatchInd": "Y",
                 "fiulsTrusteeName": "",
                 "fiOwnerName": "",
                 "fiUlsFRN": "",
@@ -273,11 +271,13 @@ class RadioOperator(Base):
                 "ulsDateType": "",
                 "dateSearchType": "",
                 "ulsFromDate": "",
-                "ulsToDate": "",
+                "ulsToDate": "", # f"{datetime.now().strftime('%m/%d/%Y')}"
                 "fiRowsPerPage": "100",
                 "ulsSortBy": "uls_l_callsign",
                 "ulsOrderBy": "ASC",
-                "Submit": "Submit",
+                # "Submit": "Submit",
+                "x": "44",
+                "y": "17",
                 "hiddenForm": "hiddenForm",
                 "jsValidated": "true",
             }
