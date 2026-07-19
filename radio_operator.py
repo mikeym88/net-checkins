@@ -288,7 +288,7 @@ class RadioOperator(Base):
             post_headers["Cache-Control"] = "max-age=0"
             post_headers["Origin"] = "https://wireless2.fcc.gov"
             operator_details = {}
-            exception_message = None
+            exception_log_message = None
             try:
                 r = sess.post(amateur_results_endpoint,
                             data=amateur_search_form_data,
@@ -370,14 +370,14 @@ class RadioOperator(Base):
                 qualifications = "".join(technician_class) + " - " + "Group " + "".join(group)
                 operator_details["qualifications"] = qualifications
             except ConnectionError as e:
-                exception_message = f"ConnectionError: {e!s}"
+                exception_log_message = f"ConnectionError: {e!s}"
             except TimeoutError as e:
-                exception_message = f"TimeoutError: {e!s}"
+                exception_log_message = f"TimeoutError: {e!s}"
             except ReadTimeout as e:
-                exception_message = f"ReadTimeout: {e!s}"
+                exception_log_message = f"ReadTimeout: {e!s}"
             finally:
-                if exception_message:
-                    self.logger.exception(exception_message)
+                if exception_log_message:
+                    self.logger.exception(exception_log_message)
 
         return operator_details
 
@@ -389,7 +389,7 @@ class RadioOperator(Base):
             "Accept": "*/*",
             "Connection": "keep-alive",
             "Accept-Encoding": "gzip, deflate, br",
-            "Cache-Control": "max-age=0"
+            "Cache-Control": "max-age=0",
         }
         amateur_results_endpoint = "https://apc-cap.ic.gc.ca/pls/apc_anon/query_amat_cs$callsign.actionquery"
         amateur_search_form_data = {
@@ -408,7 +408,19 @@ class RadioOperator(Base):
         if not details_url:
             log_message = f"No URL found for {call_sign}"
             self.logger.info(log_message)
-            return
+            return {
+                "full_name": "",
+                "call_sign": call_sign.strip(),
+                "address": "",
+                "city": "",
+                "province": "",
+                "postal_code": "",
+                "qualifications": "",
+                "status": "Active",
+                "expiration_date": None,
+                "FRN": None,
+            }
+
         details_url = "https://apc-cap.ic.gc.ca/pls/apc_anon/" + details_url.group("details_url")
         details_url = details_url.replace("&amp;", "&")
         response = requests.get(details_url, headers=headers)
